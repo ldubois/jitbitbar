@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>JitBitBar - Réglages</title>
+  <style>
+    :root {
+      --bg-base: #0a0a0b;
+      --bg-elevated: rgba(18, 18, 20, 0.95);
+      --bg-card: rgba(28, 28, 32, 0.6);
+      --bg-card-hover: rgba(38, 38, 45, 0.7);
+      --bg-input: rgba(20, 20, 24, 0.8);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: rgba(255, 255, 255, 0.95);
+      --text-secondary: rgba(255, 255, 255, 0.55);
+      --text-tertiary: rgba(255, 255, 255, 0.35);
+      --accent-purple: #4945FF;
+      --accent-purple-glow: rgba(73, 69, 255, 0.4);
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --gradient-purple: linear-gradient(135deg, #4945FF 0%, #6366F1 100%);
+      --gradient-mesh: radial-gradient(at 0% 0%, rgba(73, 69, 255, 0.15) 0px, transparent 50%),
+                       radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+      --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-base: #f5f5f7; --bg-elevated: rgba(255, 255, 255, 0.95);
+        --bg-card: rgba(255, 255, 255, 0.8); --bg-card-hover: rgba(250, 250, 255, 0.9);
+        --bg-input: rgba(245, 245, 250, 0.9); --glass-border: rgba(0, 0, 0, 0.08);
+        --text-primary: rgba(0, 0, 0, 0.9); --text-secondary: rgba(0, 0, 0, 0.55);
+        --text-tertiary: rgba(0, 0, 0, 0.35);
+        --gradient-mesh: radial-gradient(at 0% 0%, rgba(73, 69, 255, 0.08) 0px, transparent 50%),
+                         radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+      font-size: 13px; background: var(--bg-base); background-image: var(--gradient-mesh);
+      color: var(--text-primary); -webkit-font-smoothing: antialiased;
+      display: flex; height: 100vh; overflow: hidden;
+    }
+    .sidebar { width: 220px; background: var(--bg-elevated); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 70px 16px 20px; -webkit-app-region: drag; display: flex; flex-direction: column; }
+    .sidebar-header { margin-bottom: 24px; padding: 0 8px; -webkit-app-region: no-drag; }
+    .sidebar-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .sidebar-logo-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--gradient-purple); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px var(--accent-purple-glow); }
+    .sidebar-logo-icon svg { width: 18px; height: 18px; fill: white; }
+    .sidebar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .sidebar-subtitle { font-size: 11px; color: var(--text-tertiary); padding-left: 44px; margin-top: -2px; }
+    .sidebar-nav { flex: 1; }
+    .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s ease; -webkit-app-region: no-drag; color: var(--text-secondary); margin-bottom: 4px; position: relative; overflow: hidden; }
+    .sidebar-item::before { content: ''; position: absolute; inset: 0; background: var(--gradient-purple); opacity: 0; transition: opacity 0.2s ease; }
+    .sidebar-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .sidebar-item.active { color: white; box-shadow: var(--shadow-md), 0 0 20px var(--accent-purple-glow); }
+    .sidebar-item.active::before { opacity: 1; }
+    .sidebar-item svg { width: 18px; height: 18px; fill: currentColor; position: relative; z-index: 1; }
+    .sidebar-item span { font-weight: 500; position: relative; z-index: 1; }
+
+    .main { flex: 1; padding: 70px 32px 32px; overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 6px; }
+    .main::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+    .page { display: none; max-width: 480px; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.5; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input { width: 100%; padding: 12px 16px; background: var(--bg-input); border: 1px solid var(--glass-border); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; outline: none; transition: all 0.2s ease; }
+    .form-input:focus { border-color: var(--accent-purple); box-shadow: 0 0 0 3px var(--accent-purple-glow); }
+    .form-input::placeholder { color: var(--text-tertiary); }
+    .form-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.4; }
+    select.form-input { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+    .btn { padding: 12px 24px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; border: none; }
+    .btn-primary { background: var(--gradient-purple); color: white; box-shadow: var(--shadow-md), 0 0 20px var(--accent-purple-glow); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-purple-glow); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-group { display: flex; gap: 12px; margin-top: 8px; }
+
+    .status-message { padding: 14px 18px; border-radius: var(--radius-md); margin-bottom: 20px; font-size: 13px; font-weight: 500; display: none; align-items: center; gap: 10px; }
+    .status-message.success { display: flex; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent-green); }
+    .status-message.error { display: flex; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--accent-red); }
+
+    .settings-card { background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 8px; margin-bottom: 24px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-radius: var(--radius-md); transition: background 0.2s ease; }
+    .toggle-row:hover { background: var(--bg-card-hover); }
+    .toggle-info { flex: 1; }
+    .toggle-label { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+    .toggle-desc { font-size: 12px; color: var(--text-tertiary); }
+    .toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-input); border: 1px solid var(--glass-border); border-radius: 28px; transition: all 0.3s ease; }
+    .toggle-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .toggle input:checked + .toggle-slider { background: var(--gradient-purple); border-color: transparent; box-shadow: 0 0 16px var(--accent-purple-glow); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    .section-title { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; margin: 32px 0 16px; display: flex; align-items: center; gap: 12px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
+
+    .project-list-container { background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); max-height: 260px; overflow-y: auto; margin-top: 12px; }
+    .project-item { display: flex; align-items: center; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease; gap: 14px; border-bottom: 1px solid var(--glass-border); }
+    .project-item:last-child { border-bottom: none; }
+    .project-item:hover { background: var(--bg-card-hover); }
+    .project-item.selected { background: rgba(73, 69, 255, 0.12); }
+    .project-name { font-weight: 500; font-size: 14px; }
+    .project-loading { text-align: center; padding: 24px; color: var(--text-tertiary); }
+    .current-project { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: 20px; font-size: 13px; }
+    .current-project .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 9h-2V9h2v2zm0-4h-2V5h2v2z"/></svg>
+        </div>
+        <span class="sidebar-title">JitBitBar</span>
+      </div>
+      <div class="sidebar-subtitle">Réglages</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-item active" data-page="jitbit">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <span>Jitbit</span>
+      </div>
+      <div class="sidebar-item" data-page="asana">
+        <svg viewBox="0 0 24 24"><path d="M18.78 12.65a3.22 3.22 0 100 6.44 3.22 3.22 0 000-6.44zm-13.56 0a3.22 3.22 0 100 6.44 3.22 3.22 0 000-6.44zM12 4.91a3.22 3.22 0 100 6.45 3.22 3.22 0 000-6.45z"/></svg>
+        <span>Asana</span>
+      </div>
+      <div class="sidebar-item" data-page="general">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Général</span>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main">
+    <div id="statusMessage" class="status-message"></div>
+
+    <!-- JITBIT -->
+    <div class="page active" id="page-jitbit">
+      <h1 class="page-title">Connexion Jitbit</h1>
+      <p class="page-desc">Renseigne ton helpdesk et ton token d'API pour suivre tes demandes.</p>
+      <div class="form-group">
+        <label class="form-label">URL du helpdesk</label>
+        <input type="text" class="form-input" id="jitbitUrl" placeholder="https://masociete.jitbit.com/helpdesk">
+        <div class="form-hint">L'adresse racine, l'API est sous /api automatiquement.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token API</label>
+        <input type="password" class="form-input" id="jitbitToken" placeholder="Colle ton token Jitbit">
+        <div class="form-hint">Jitbit → ton avatar → « Token API ». Laisse vide pour conserver le token déjà enregistré.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Demandes à afficher</label>
+        <select class="form-input" id="ticketMode">
+          <option value="handledbyme">Qui me sont assignées</option>
+          <option value="unanswered">Sans réponse</option>
+          <option value="unclosed">Toutes les ouvertes</option>
+          <option value="all">Toutes (y compris closes)</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="saveJitbitBtn">Tester &amp; enregistrer</button>
+      </div>
+    </div>
+
+    <!-- ASANA -->
+    <div class="page" id="page-asana">
+      <h1 class="page-title">Connexion Asana</h1>
+      <p class="page-desc">Pour transformer une demande en tâche Asana en un clic.</p>
+      <div class="form-group">
+        <label class="form-label">Personal Access Token</label>
+        <input type="password" class="form-input" id="asanaToken" placeholder="Colle ton PAT Asana">
+        <div class="form-hint">Asana → Settings → Apps → Personal access tokens. Laisse vide pour conserver le token enregistré.</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="saveAsanaBtn">Valider le token</button>
+      </div>
+
+      <div class="section-title">Projet cible</div>
+      <div id="currentProject"></div>
+      <div class="form-group" style="margin-top:12px">
+        <input type="text" class="form-input" id="asanaProjectSearch" placeholder="Rechercher un projet Asana…">
+      </div>
+      <div id="asanaProjectList" class="project-list-container" style="display:none"></div>
+    </div>
+
+    <!-- GENERAL -->
+    <div class="page" id="page-general">
+      <h1 class="page-title">Général</h1>
+      <p class="page-desc">Comportement de JitBitBar.</p>
+      <div class="section-title">Rafraîchissement</div>
+      <div class="form-group">
+        <label class="form-label">Intervalle de mise à jour</label>
+        <select class="form-input" id="refreshInterval">
+          <option value="60000">1 minute</option>
+          <option value="120000" selected>2 minutes</option>
+          <option value="300000">5 minutes</option>
+          <option value="600000">10 minutes</option>
+        </select>
+      </div>
+      <div class="section-title">Notifications</div>
+      <div class="settings-card">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-label">Nouvelles demandes</div>
+            <div class="toggle-desc">Notifier à l'arrivée d'un nouveau ticket</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notifyNewTicket" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const bridge = window.jitbitbar;
+    let searchTimeout = null;
+
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    const pages = document.querySelectorAll('.page');
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', () => {
+        sidebarItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        pages.forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + item.dataset.page).classList.add('active');
+      });
+    });
+
+    const statusMessage = document.getElementById('statusMessage');
+    function showStatus(message, type) {
+      statusMessage.textContent = message;
+      statusMessage.className = 'status-message ' + type;
+      setTimeout(() => { statusMessage.className = 'status-message'; }, 5000);
+    }
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text == null ? '' : String(text);
+      return div.innerHTML;
+    }
+
+    // ---- Jitbit ----
+    document.getElementById('saveJitbitBtn').addEventListener('click', async () => {
+      const url = document.getElementById('jitbitUrl').value.trim();
+      const token = document.getElementById('jitbitToken').value.trim();
+      const btn = document.getElementById('saveJitbitBtn');
+      if (!url) { showStatus('Renseigne l\'URL du helpdesk', 'error'); return; }
+      btn.disabled = true; btn.textContent = 'Test en cours…';
+      try {
+        // Validate only when a token was entered; otherwise just save URL/mode.
+        if (token) {
+          const res = await bridge.jitbit.validate(url, token);
+          if (!res.valid) { showStatus('Token ou URL invalide', 'error'); return; }
+          await bridge.config.set('jitbitToken', token);
+          document.getElementById('jitbitToken').value = '';
+        }
+        await bridge.config.set('jitbitUrl', JitbitNormalise(url));
+        await bridge.config.set('ticketMode', document.getElementById('ticketMode').value);
+        showStatus('Connexion Jitbit enregistrée ✓', 'success');
+      } catch (e) {
+        showStatus('Erreur : ' + (e.message || 'enregistrement impossible'), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Tester & enregistrer';
+      }
+    });
+    document.getElementById('ticketMode').addEventListener('change', async function () {
+      await bridge.config.set('ticketMode', this.value);
+    });
+    function JitbitNormalise(url) {
+      let s = (url || '').trim();
+      if (!s) return s;
+      if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+      return s.replace(/\/+$/, '').replace(/\/api$/i, '');
+    }
+
+    // ---- Asana ----
+    document.getElementById('saveAsanaBtn').addEventListener('click', async () => {
+      const token = document.getElementById('asanaToken').value.trim();
+      const btn = document.getElementById('saveAsanaBtn');
+      if (!token) { showStatus('Colle ton PAT Asana', 'error'); return; }
+      btn.disabled = true; btn.textContent = 'Validation…';
+      try {
+        const res = await bridge.asana.validate(token);
+        if (!res.valid) { showStatus('Token Asana invalide', 'error'); return; }
+        await bridge.config.set('asanaToken', token);
+        document.getElementById('asanaToken').value = '';
+        showStatus('Asana connecté' + (res.name ? ' (' + res.name + ')' : '') + ' ✓', 'success');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Valider le token';
+      }
+    });
+
+    document.getElementById('asanaProjectSearch').addEventListener('input', function () {
+      clearTimeout(searchTimeout);
+      const query = this.value.trim();
+      const container = document.getElementById('asanaProjectList');
+      if (query.length < 2) { container.style.display = 'none'; return; }
+      container.style.display = 'block';
+      container.innerHTML = '<div class="project-loading">Recherche…</div>';
+      searchTimeout = setTimeout(async () => {
+        const projects = await bridge.asana.searchProjects(query);
+        if (!projects || projects.length === 0) { container.innerHTML = '<div class="project-loading">Aucun projet trouvé</div>'; return; }
+        container.innerHTML = projects.map(p =>
+          '<div class="project-item" data-gid="' + escapeHtml(p.gid) + '" data-name="' + escapeHtml(p.name) + '"><div class="project-name">' + escapeHtml(p.name) + '</div></div>'
+        ).join('');
+        container.querySelectorAll('.project-item').forEach(item => {
+          item.addEventListener('click', async () => {
+            await bridge.config.set('asanaProjectId', item.dataset.gid);
+            await bridge.config.set('asanaProjectName', item.dataset.name);
+            renderCurrentProject(item.dataset.name);
+            container.style.display = 'none';
+            document.getElementById('asanaProjectSearch').value = '';
+            showStatus('Projet « ' + item.dataset.name + ' » sélectionné ✓', 'success');
+          });
+        });
+      }, 350);
+    });
+
+    function renderCurrentProject(name) {
+      const el = document.getElementById('currentProject');
+      el.innerHTML = name
+        ? '<div class="current-project"><span class="dot"></span>' + escapeHtml(name) + '</div>'
+        : '<div class="form-hint">Aucun projet sélectionné.</div>';
+    }
+
+    // ---- General ----
+    document.getElementById('refreshInterval').addEventListener('change', async function () {
+      await bridge.config.set('refreshInterval', parseInt(this.value));
+    });
+    document.getElementById('notifyNewTicket').addEventListener('change', async function () {
+      const cfg = await bridge.config.getAll();
+      const notifs = cfg.notifications || { enabled: true, newTicket: true };
+      notifs.newTicket = this.checked;
+      await bridge.config.set('notifications', notifs);
+    });
+
+    async function load() {
+      if (!bridge) return;
+      const cfg = await bridge.config.getAll();
+      if (!cfg) return;
+      document.getElementById('jitbitUrl').value = cfg.jitbitUrl || '';
+      if (cfg.hasJitbitToken) document.getElementById('jitbitToken').placeholder = '•••••••• (enregistré)';
+      if (cfg.hasAsanaToken) document.getElementById('asanaToken').placeholder = '•••••••• (enregistré)';
+      document.getElementById('ticketMode').value = cfg.ticketMode || 'handledbyme';
+      document.getElementById('refreshInterval').value = cfg.refreshInterval || 120000;
+      if (cfg.notifications) document.getElementById('notifyNewTicket').checked = cfg.notifications.newTicket !== false;
+      renderCurrentProject(cfg.asanaProjectName || '');
+    }
+
+    load();
+  </script>
+</body>
+</html>

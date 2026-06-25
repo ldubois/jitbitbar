@@ -72,24 +72,37 @@ class TrayManager {
     };
     const [r, g, b] = colors[status];
 
-    const center = size / 2;
-    const radius = 6;
+    // Point-up triangle, padded inside the 16px canvas.
+    const apex = { x: size / 2, y: 2 };
+    const left = { x: 2.5, y: size - 3 };
+    const right = { x: size - 2.5, y: size - 3 };
+
+    // Coverage of a point inside the triangle, with 3x3 supersampling for AA.
+    const sign = (px: number, py: number, a: { x: number; y: number }, b2: { x: number; y: number }) =>
+      (px - b2.x) * (a.y - b2.y) - (a.x - b2.x) * (py - b2.y);
+    const inside = (px: number, py: number) => {
+      const d1 = sign(px, py, apex, left);
+      const d2 = sign(px, py, left, right);
+      const d3 = sign(px, py, right, apex);
+      const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+      const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+      return !(hasNeg && hasPos);
+    };
+
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
-        const offset = (y * size + x) * 4;
-        const dist = Math.sqrt((x - center) ** 2 + (y - center) ** 2);
-        if (dist <= radius) {
-          canvas[offset] = r;
-          canvas[offset + 1] = g;
-          canvas[offset + 2] = b;
-          canvas[offset + 3] = 255;
-        } else if (dist <= radius + 1) {
-          const alpha = Math.max(0, (radius + 1 - dist)) * 255;
-          canvas[offset] = r;
-          canvas[offset + 1] = g;
-          canvas[offset + 2] = b;
-          canvas[offset + 3] = Math.round(alpha);
+        let hits = 0;
+        for (let sy = 0; sy < 3; sy++) {
+          for (let sx = 0; sx < 3; sx++) {
+            if (inside(x + (sx + 0.5) / 3, y + (sy + 0.5) / 3)) hits++;
+          }
         }
+        if (hits === 0) continue;
+        const offset = (y * size + x) * 4;
+        canvas[offset] = r;
+        canvas[offset + 1] = g;
+        canvas[offset + 2] = b;
+        canvas[offset + 3] = Math.round((hits / 9) * 255);
       }
     }
 

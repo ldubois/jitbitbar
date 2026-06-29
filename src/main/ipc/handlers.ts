@@ -23,7 +23,8 @@ export function setupIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.JITBIT_GET_COMMENTS, async (_, ticketId: number) => {
     const client = buildJitbitClient();
     if (!client) return [];
-    return client.getComments(Number(ticketId));
+    // Full conversation: original message + replies (system lines filtered out).
+    return client.getThread(Number(ticketId));
   });
 
   ipcMain.handle(IPC_CHANNELS.JITBIT_REPLY, async (_, ticketId: number, body: string) => {
@@ -49,10 +50,10 @@ export function setupIpcHandlers(): void {
       if (!closed) return { success: false, error: 'Échec de la clôture' };
 
       // Complete the linked Asana task, if any.
-      const taskGid = config.getLinkedAsana(id);
-      if (taskGid) {
+      const link = config.getLinkedAsana(id);
+      if (link) {
         const asana = buildAsanaClient();
-        if (asana) await asana.completeTask(taskGid);
+        if (asana) await asana.completeTask(link.gid);
         config.unlinkAsana(id);
       }
 
@@ -106,10 +107,14 @@ export function setupIpcHandlers(): void {
       .filter(Boolean)
       .join('\n');
 
+    // Don't create a duplicate if this ticket is already linked.
+    const existing = config.getLinkedAsana(ticket.id);
+    if (existing) return { success: true, url: existing.url, alreadyLinked: true };
+
     const result = await asana.createTask(projectGid, `[Jitbit #${ticket.id}] ${ticket.subject}`, notes);
     if (!result) return { success: false, error: 'Échec de la création de la tâche' };
 
-    config.linkAsana(ticket.id, result.gid);
+    config.linkAsana(ticket.id, result.gid, result.permalinkUrl);
     return { success: true, url: result.permalinkUrl };
   });
 

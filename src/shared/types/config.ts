@@ -21,8 +21,14 @@ export interface AppConfig {
   theme: 'system' | 'light' | 'dark';
   /** Ticket IDs hidden from the popover (local only). */
   dismissedTickets: number[];
-  /** ticketId -> Asana task gid, so closing also completes the task. */
-  linkedAsana: Record<string, string>;
+  /** ticketId -> linked Asana task (gid + permalink), for cross-close + display. */
+  linkedAsana: Record<string, AsanaLink>;
+}
+
+/** A Jitbit ticket linked to an Asana task. */
+export interface AsanaLink {
+  gid: string;
+  url: string;
 }
 
 export const DEFAULT_CONFIG: AppConfig = {

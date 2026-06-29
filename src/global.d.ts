@@ -11,7 +11,7 @@ interface JitBitBarAPI {
   };
 
   asana: {
-    createTask: (ticket: any) => Promise<{ success: boolean; url?: string; error?: string }>;
+    createTask: (ticket: any) => Promise<{ success: boolean; url?: string; error?: string; alreadyLinked?: boolean }>;
     validate: (token: string) => Promise<{ valid: boolean; name?: string | null }>;
     searchProjects: (query: string) => Promise<{ gid: string; name: string }[]>;
   };

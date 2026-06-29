@@ -112,7 +112,11 @@ class PollingService {
   }
 
   private emitUpdate(): void {
-    const visible = this.visibleTickets(this.lastData.tickets);
+    const links = config.get('linkedAsana') || {};
+    const visible = this.visibleTickets(this.lastData.tickets).map((t) => ({
+      ...t,
+      asanaUrl: links[String(t.id)]?.url,
+    }));
     const dataForRenderer = { ...this.lastData, tickets: visible };
 
     if (this.onDataUpdate) this.onDataUpdate(dataForRenderer);

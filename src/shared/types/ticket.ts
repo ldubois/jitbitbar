@@ -24,6 +24,8 @@ export interface Ticket {
   isClosed?: boolean;
   /** First lines of the ticket body, when available. */
   preview?: string;
+  /** Permalink of the linked Asana task, if this ticket was pushed to Asana. */
+  asanaUrl?: string;
 }
 
 /** A single message/comment on a ticket, from `/api/comments`. */
@@ -32,6 +34,16 @@ export interface TicketComment {
   body: string;
   userName?: string;
   date?: string;
+  forTechsOnly?: boolean;
+  isSystem?: boolean;
+}
+
+/** One entry in the rendered conversation thread (original message + replies). */
+export interface ThreadMessage {
+  author: string;
+  date?: string;
+  body: string;
+  kind: 'original' | 'comment';
   forTechsOnly?: boolean;
 }
 

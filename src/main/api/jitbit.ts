@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { Ticket, TicketComment, TicketMode } from '../../shared/types';
+import { Ticket, TicketComment, TicketMode, ThreadMessage } from '../../shared/types';
 
 /**
  * Thin REST client for the Jitbit Helpdesk API.
@@ -74,14 +74,58 @@ export class JitbitClient {
       const raw = Array.isArray(response.data) ? response.data : [];
       return raw.map((c) => ({
         id: c.CommentID ?? c.id ?? 0,
-        body: c.Body ?? c.body ?? '',
-        userName: c.UserName ?? c.userName,
+        body: JitbitClient.stripHtml(c.Body ?? c.body ?? ''),
+        userName: JitbitClient.fullName(c.FirstName, c.LastName) ?? c.UserName ?? c.userName,
         date: c.CommentDate ?? c.Date ?? c.date,
         forTechsOnly: c.ForTechsOnly ?? c.forTechsOnly ?? false,
+        isSystem: c.IsSystem ?? false,
       }));
     } catch {
       return [];
     }
+  }
+
+  /** Fetch the ticket's original message (Body) and meta. */
+  async getTicketBody(ticketId: number): Promise<{ subject: string; body: string; date?: string; requester?: string } | null> {
+    try {
+      const r = await this.client.get('/ticket', { params: { id: ticketId } });
+      const t = r.data ?? {};
+      const requester =
+        t.SubmitterUserInfo?.Username ??
+        JitbitClient.fullName(t.SubmitterUserInfo?.FirstName, t.SubmitterUserInfo?.LastName) ??
+        JitbitClient.fullName(t.FirstName, t.LastName) ??
+        t.UserName;
+      return {
+        subject: t.Subject ?? '',
+        body: JitbitClient.stripHtml(t.Body ?? ''),
+        date: JitbitClient.toIso(t.IssueDate),
+        requester,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Combined conversation thread: original message first, then comments. */
+  async getThread(ticketId: number): Promise<ThreadMessage[]> {
+    const [ticket, comments] = await Promise.all([this.getTicketBody(ticketId), this.getComments(ticketId)]);
+    const messages: ThreadMessage[] = [];
+    if (ticket && ticket.body) {
+      messages.push({ author: ticket.requester || 'Demandeur', date: ticket.date, body: ticket.body, kind: 'original' });
+    }
+    for (const c of comments) {
+      if (c.isSystem) continue; // skip system log lines
+      // Avoid duplicating the original message if Jitbit returns it as first comment.
+      if (ticket && messages.length === 1 && c.body && c.body === ticket.body) continue;
+      messages.push({
+        author: c.userName || '?',
+        date: c.date,
+        body: c.body,
+        kind: 'comment',
+        forTechsOnly: c.forTechsOnly,
+      });
+    }
+    return messages;
   }
 
   /** Add a reply to a ticket. `forTechsOnly` keeps it an internal note. */
@@ -131,13 +175,16 @@ export class JitbitClient {
       statusId: statusId != null ? Number(statusId) : undefined,
       priority: t.Priority != null ? Number(t.Priority) : undefined,
       priorityName: t.PriorityString ?? t.PriorityName,
-      categoryName: t.CategoryName ?? t.Category,
-      userName: t.UserName ?? t.SubmittedByUserName ?? t.UpdatedByUser,
-      assignedToUser: t.AssignedToUserName ?? t.TechFirstName,
+      categoryName: t.Category ?? t.CategoryName,
+      userName: JitbitClient.fullName(t.FirstName, t.LastName) ?? t.UserName ?? t.SubmittedByUserName,
+      assignedToUser: t.Technician ?? JitbitClient.fullName(t.TechFirstName, t.TechLastName) ?? t.AssignedToUserName,
       updatedAt: JitbitClient.toIso(t.LastUpdated ?? t.UpdatedAt ?? t.LastUpdate),
       createdAt: JitbitClient.toIso(t.IssueDate ?? t.CreatedAt),
       url: this.ticketUrl(id),
-      isClosed: typeof t.IsClosed === 'boolean' ? t.IsClosed : status.toLowerCase() === 'closed',
+      isClosed:
+        typeof t.IsClosed === 'boolean'
+          ? t.IsClosed
+          : !!t.ResolvedDate || /clos|ferm|résol|resol|closed/i.test(status),
       preview: typeof t.Body === 'string' ? JitbitClient.stripHtml(t.Body).slice(0, 140) : undefined,
     };
   }
@@ -151,12 +198,24 @@ export class JitbitClient {
     return isNaN(d.getTime()) ? undefined : d.toISOString();
   }
 
+  /** Join first/last name, returning undefined when both are empty. */
+  static fullName(first?: unknown, last?: unknown): string | undefined {
+    const parts = [first, last].filter((p) => typeof p === 'string' && p.trim()).map((p) => (p as string).trim());
+    return parts.length ? parts.join(' ') : undefined;
+  }
+
   static stripHtml(html: string): string {
     return html
       .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li)>/gi, '\n')
       .replace(/<[^>]+>/g, '')
       .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;|&#x27;/g, "'")
       .replace(/&amp;/g, '&')
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
 }

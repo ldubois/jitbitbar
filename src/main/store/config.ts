@@ -1,5 +1,5 @@
 import Store from 'electron-store';
-import { AppConfig, DEFAULT_CONFIG } from '../../shared/types/config';
+import { AppConfig, AsanaLink, DEFAULT_CONFIG } from '../../shared/types/config';
 
 const configStore = new Store<AppConfig>({
   name: 'config',
@@ -42,9 +42,9 @@ export const config = {
     return !!this.get('jitbitUrl');
   },
 
-  linkAsana(ticketId: number, taskGid: string): void {
+  linkAsana(ticketId: number, taskGid: string, url: string): void {
     const links = { ...(this.get('linkedAsana') || {}) };
-    links[String(ticketId)] = taskGid;
+    links[String(ticketId)] = { gid: taskGid, url };
     this.set('linkedAsana', links);
   },
 
@@ -54,7 +54,7 @@ export const config = {
     this.set('linkedAsana', links);
   },
 
-  getLinkedAsana(ticketId: number): string | undefined {
+  getLinkedAsana(ticketId: number): AsanaLink | undefined {
     return (this.get('linkedAsana') || {})[String(ticketId)];
   },
 };

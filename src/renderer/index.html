@@ -122,7 +122,19 @@
     .badge-error { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
     .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
     .badge-info { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+    .badge-asana { background: rgba(16, 185, 129, 0.18); color: var(--accent-green); }
     .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .ticket-link { font-size: 12px; flex-shrink: 0; }
+
+    /* THREAD (conversation) */
+    .thread { margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .thread-loading { font-size: 12px; color: var(--text-tertiary); padding: 6px 0; }
+    .thread-msg { padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
+    .thread-msg.original { border-left: 3px solid var(--accent-purple); }
+    .thread-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .thread-author { font-size: 12px; font-weight: 600; }
+    .thread-date { font-size: 10px; color: var(--text-tertiary); white-space: nowrap; }
+    .thread-body { font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
 
     /* REPLY */
     .reply-box {
@@ -315,6 +327,7 @@
           <div class="ticket-header">
             <div class="severity-dot ${sev}"></div>
             <div class="ticket-subject">${escapeHtml(t.subject)}</div>
+            ${t.asanaUrl ? '<span class="ticket-link" title="Liée à une tâche Asana">🔗</span>' : ''}
             <div class="ticket-id">#${t.id}</div>
           </div>
           <div class="ticket-preview">${escapeHtml(t.preview || t.categoryName || t.status || '')}</div>
@@ -330,7 +343,13 @@
             <div class="detail-tags">
               <span class="badge badge-${sev}">${escapeHtml(t.status || '—')}</span>
               ${t.categoryName ? '<span class="badge badge-info">' + escapeHtml(t.categoryName) + '</span>' : ''}
+              ${t.asanaUrl ? '<span class="badge badge-asana">🔗 Asana</span>' : ''}
             </div>
+
+            <div class="thread" data-thread="${t.id}">
+              <div class="thread-loading">Chargement de la demande…</div>
+            </div>
+
             <div class="detail-grid">
               <div class="detail-cell">
                 <div class="detail-label">Demandeur</div>
@@ -355,7 +374,7 @@
             <div class="detail-actions">
               <button class="detail-btn detail-btn-secondary" data-open="${escapeHtml(t.url)}">Ouvrir</button>
               <button class="detail-btn detail-btn-primary" data-reply-id="${t.id}">Répondre</button>
-              <button class="detail-btn detail-btn-primary" data-asana-id="${t.id}">→ Asana</button>
+              <button class="detail-btn detail-btn-primary" data-asana-id="${t.id}"${t.asanaUrl ? ' data-asana-open="' + escapeHtml(t.asanaUrl) + '"' : ''}>${t.asanaUrl ? 'Voir Asana' : '→ Asana'}</button>
               <button class="detail-btn detail-btn-success" data-close-id="${t.id}">Clôturer</button>
             </div>
           </div>
@@ -370,9 +389,22 @@
       const byId = (id) => tickets.find(t => String(t.id) === String(id));
 
       container.querySelectorAll('.ticket-item').forEach(item => {
-        item.addEventListener('click', (e) => {
+        item.addEventListener('click', async (e) => {
           if (e.target.closest('.detail-btn') || e.target.closest('.reply-box')) return;
           item.classList.toggle('expanded');
+          if (!item.classList.contains('expanded')) return;
+          const id = item.dataset.id;
+          const threadEl = item.querySelector('.thread[data-thread="' + id + '"]');
+          if (threadEl && !threadEl.dataset.loaded) {
+            threadEl.dataset.loaded = '1';
+            try {
+              const msgs = await bridge.jitbit.getComments(Number(id));
+              renderThread(threadEl, msgs);
+            } catch (err) {
+              threadEl.dataset.loaded = '';
+              threadEl.innerHTML = '<div class="thread-loading">Erreur de chargement.</div>';
+            }
+          }
         });
       });
 
@@ -400,13 +432,23 @@
       container.querySelectorAll('[data-asana-id]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
+          // Already linked → open the existing task instead of creating a duplicate.
+          if (btn.dataset.asanaOpen) { bridge.app.openExternal(btn.dataset.asanaOpen); return; }
           const t = byId(btn.dataset.asanaId);
           if (!t) return;
           btn.disabled = true; btn.textContent = 'Création…';
           const res = await bridge.asana.createTask(t);
           if (res.success) {
-            btn.textContent = 'Créée ✓';
-            if (res.url) bridge.app.openExternal(res.url);
+            btn.textContent = 'Voir Asana';
+            btn.disabled = false;
+            btn.dataset.asanaOpen = res.url || '';
+            // Open the freshly created task once; reflect link on the card.
+            if (res.url && !res.alreadyLinked) bridge.app.openExternal(res.url);
+            const item = btn.closest('.ticket-item');
+            const head = item && item.querySelector('.ticket-header .ticket-subject');
+            if (head && !item.querySelector('.ticket-link')) {
+              head.insertAdjacentHTML('afterend', '<span class="ticket-link" title="Liée à une tâche Asana">🔗</span>');
+            }
           } else {
             btn.disabled = false; btn.textContent = '→ Asana';
           }
@@ -424,6 +466,21 @@
           if (!res.success) { btn.disabled = false; btn.textContent = 'Clôturer'; }
         });
       });
+    }
+
+    function renderThread(el, msgs) {
+      if (!msgs || msgs.length === 0) {
+        el.innerHTML = '<div class="thread-loading">Aucun message.</div>';
+        return;
+      }
+      el.innerHTML = msgs.map(m => {
+        const cls = m.kind === 'original' ? 'thread-msg original' : 'thread-msg';
+        const lock = m.forTechsOnly ? ' 🔒' : '';
+        return '<div class="' + cls + '">'
+          + '<div class="thread-head"><span class="thread-author">' + escapeHtml(m.author) + lock + '</span>'
+          + '<span class="thread-date">' + formatDate(m.date) + '</span></div>'
+          + '<div class="thread-body">' + escapeHtml(m.body) + '</div></div>';
+      }).join('');
     }
 
     function updateStatus(data) {
